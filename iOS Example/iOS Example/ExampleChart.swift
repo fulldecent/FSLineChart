@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import FSLineChart
 
 class ExampleChart: FSLineChart {
     override func awakeFromNib() {
@@ -14,12 +15,9 @@ class ExampleChart: FSLineChart {
     }
     
     public func load() {
-        var data: [Int] = []
-        
         // Generate some dummy data
-        for _ in 0...10 {
-            data.append(Int(20 + (arc4random() % 100)))
-        }
+        let data = (0...10).map { _ in Float(20 + (arc4random() % 100)) }
+        
         
         verticalGridStep = 5
         horizontalGridStep = 9
