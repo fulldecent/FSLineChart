@@ -18,11 +18,10 @@ class ExampleChart: FSLineChart {
         // Generate some dummy data
         let data = (0...10).map { _ in Float(20 + (arc4random() % 100)) }
         
-        
         verticalGridStep = 5
         horizontalGridStep = 9
         labelForIndex = { "\($0)" }
-        labelForValue = { "$\($0)" }
+        labelForValue = { String(format: "$%.02f", $0) }
         setChartData(data)
     }
     

@@ -20,29 +20,23 @@ class ViewController: UIViewController {
 
     func loadChartWithDates() {
         // Generating some dummy data
-//        let chartData = (0..<7).map { Float($0) / 30.0 + Float(Int.random(in: 0...100)) / 500  }
+        let chartData = (0..<7).map { Float($0) / 30.0 + Float(Int.random(in: 0...100)) / 500  }
         
-        let chartData = (0..<7).map { Float($0) + Float(Int.random(in: 10...25)) }
-
         let months: [String] = ["January", "February", "March", "April", "May", "June", "July"]
 
         // Setting up the line chart
-        chartWithDates.verticalGridStep = 6;
-        chartWithDates.horizontalGridStep = 3;
+        chartWithDates.verticalGridStep = 6
+        chartWithDates.horizontalGridStep = 3
         chartWithDates.fillColor = nil;
         chartWithDates.displayDataPoint = true
         chartWithDates.dataPointColor = .fsOrange
         chartWithDates.dataPointBackgroundColor = UIColor.fsOrange
         chartWithDates.dataPointRadius = 2
         chartWithDates.color = chartWithDates.dataPointColor.withAlphaComponent(0.3)
-        chartWithDates.valueLabelPosition = .mirrored;
+        chartWithDates.valueLabelPosition = .mirrored
 
-        chartWithDates.labelForIndex =  { months[$0] };
-
-        chartWithDates.labelForValue = { value in
-            print(value)
-            return String(format: "%.02f €", value)
-        }
+        chartWithDates.labelForIndex =  { months[$0] }
+        chartWithDates.labelForValue = { String(format: "%.02f €", $0) }
 
         chartWithDates.setChartData(chartData)
     }
