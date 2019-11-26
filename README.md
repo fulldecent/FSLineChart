@@ -33,77 +33,53 @@ labelForValue = { "$\($0)" }
 setChartData(data)
 ```
 
-Or in objective-c
-
-```objc
-NSArray* months = @[@"January", @"February", @"March", @"April", @"May", @"June", @"July"];
-    
-FSLineChart* lineChart = [[FSLineChart alloc] initWithFrame:frame];
-
-lineChart.labelForIndex = ^(NSUInteger item) {
-    return months[item];
-};
-
-lineChart.labelForValue = ^(CGFloat value) {
-    return [NSString stringWithFormat:@"%.02f €", powf(10,value)];
-};
-
-[lineChart setChartData:chartData];
-```
-
 You can also set several parameters. Some of the parameters including `color` and `fillColor` must be set before calling the `setChartData` method. All those properties are available:
 
-```objc
+```swift
 // Index label properties
-@property (copy) FSLabelForIndexGetter labelForIndex;
-@property (nonatomic, strong) UIFont* indexLabelFont;
-@property (nonatomic) UIColor* indexLabelTextColor;
-@property (nonatomic) UIColor* indexLabelBackgroundColor;
+public var labelForIndex: LabelForIndexGetter?
+
+public var indexLabelFont: UIFont = UIFont(name: "HelveticaNeue-Light", size: 10)!
+public var indexLabelTextColor: UIColor = .gray
+public var indexLabelBackgroundColor: UIColor = .clear
 
 // Value label properties
-@property (copy) FSLabelForValueGetter labelForValue;
-@property (nonatomic, strong) UIFont* valueLabelFont;
-@property (nonatomic) UIColor* valueLabelTextColor;
-@property (nonatomic) UIColor* valueLabelBackgroundColor;
-@property (nonatomic) ValueLabelPositionType valueLabelPosition;
+public var labelForValue: LabelForValueGetter?
+public var valueLabelFont: UIFont = UIFont(name: "HelveticaNeue-Light", size: 11)!
+public var valueLabelTextColor: UIColor = .gray
+public var valueLabelBackgroundColor: UIColor = UIColor(white: 1, alpha:0.75)
+public var valueLabelPosition: ValueLabelPosition = .right
 
 // Number of visible step in the chart
-@property (nonatomic) int gridStep;
-@property (nonatomic) int verticalGridStep;
-@property (nonatomic) int horizontalGridStep;
+public var verticalGridStep: Int = 3
+public var horizontalGridStep: Int = 3
 
 // Margin of the chart
-@property (nonatomic) CGFloat margin;
-
-@property (nonatomic) CGFloat axisWidth;
-@property (nonatomic) CGFloat axisHeight;
+public var margin: CGFloat = 0.5
 
 // Decoration parameters, let you pick the color of the line as well as the color of the axis
-@property (nonatomic, strong) UIColor* axisColor;
-@property (nonatomic) CGFloat axisLineWidth;
+public var axisColor: UIColor = UIColor(white: 0.7, alpha: 1.0)
+public var axisLineWidth: CGFloat = 1
 
 // Chart parameters
-@property (nonatomic, strong) UIColor* color;
-@property (nonatomic, strong) UIColor* fillColor;
-@property (nonatomic) CGFloat lineWidth;
+public var color: UIColor = .fsLightBlue
+public var fillColor: UIColor? = UIColor.fsLightBlue.withAlphaComponent(0.25)
+public var lineWidth: CGFloat = 1.0
 
 // Data points
-@property (nonatomic) BOOL displayDataPoint;
-@property (nonatomic, strong) UIColor* dataPointColor;
-@property (nonatomic, strong) UIColor* dataPointBackgroundColor;
-@property (nonatomic) CGFloat dataPointRadius;
+public var displayDataPoint: Bool = false
+public var dataPointColor: UIColor = .fsLightBlue
+public var dataPointBackgroundColor: UIColor = .fsLightBlue
+public var dataPointRadius: CGFloat = 1
 
 // Grid parameters
-@property (nonatomic) BOOL drawInnerGrid;
-@property (nonatomic, strong) UIColor* innerGridColor;
-@property (nonatomic) CGFloat innerGridLineWidth;
+public var drawInnerGrid: Bool = true
+public var innerGridColor: UIColor = UIColor(white: 0.9, alpha: 1.0)
+public var innerGridLineWidth: CGFloat = 0.5
 
 // Smoothing
-@property (nonatomic) BOOL bezierSmoothing;
-@property (nonatomic) CGFloat bezierSmoothingTension;
-
-// Animations
-@property (nonatomic) CGFloat animationDuration;
+public var bezierSmoothing: Bool = true
+public var bezierSmoothingTension: CGFloat = 0.2
 ```
 
 
