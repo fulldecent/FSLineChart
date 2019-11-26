@@ -10,9 +10,8 @@ Screenshots
 
 Installing FSLineChart
 ---
-Add the contents of the FSLineChart project to your directory or simply add the following line to your Podfile:
 
-    pod "FSLineChart"
+Add this to your project using Swift Package Manager. In Xcode that is simply: File > Swift Packages > Add Package Dependency... and you're done. Alternative installations options are available for legacy projects.
 
 How to use
 ---
