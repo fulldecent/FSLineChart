@@ -263,7 +263,7 @@ fileprivate extension LineChartLayoutManager {
 
 extension LineChartLayoutManager {
     func calculateHorizontalScale(
-        data: [Float],
+        data: [Double],
         horizontalGridStep: Int
     ) -> CGFloat {
         var scale: CGFloat = 1.0
@@ -404,7 +404,7 @@ fileprivate extension LineChartLayoutManager {
 
 // It's done for refactoring purposes
 extension LineChartLayoutManager {
-    var data: [Float] {
+    var data: [Double] {
         return chart.data
     }
     

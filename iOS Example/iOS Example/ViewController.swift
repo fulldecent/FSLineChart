@@ -24,13 +24,13 @@ class ViewController: UIViewController {
     }
 
     private func loadChartWithDates() {
-        let chartData = (0..<7).map { Float($0) / 30.0 + Float(Int.random(in: 0...100)) / 500  }
+        let chartData = (0..<7).map { Double($0) / 30.0 + Double(Int.random(in: 0...100)) / 500  }
             
         chartWithDates.setChartData(chartData)
     }
     
     private func loadChartWithZeroes() {
-        let chartData = (0..<10).map { _ in Float(0) }
+        let chartData = (0..<10).map { _ in Double(0) }
         chartWithZeroes.setChartData(chartData)
     }
     

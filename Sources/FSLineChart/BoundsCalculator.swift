@@ -10,12 +10,12 @@ import CoreGraphics
 import Foundation
 
 class BoundsCalculator {
-    private(set) var min: Float = MAXFLOAT
-    private(set) var max: Float = -MAXFLOAT
+    private(set) var min: Double = Double.greatestFiniteMagnitude
+    private(set) var max: Double = -Double.greatestFiniteMagnitude
     
-    func computeBounds(data: [Float], verticalGridStep: Int) {
-        min = MAXFLOAT
-        max = -MAXFLOAT
+    func computeBounds(data: [Double], verticalGridStep: Int) {
+        min = Double.greatestFiniteMagnitude
+        max = -Double.greatestFiniteMagnitude
 
         for number in data {
            if number < min {
@@ -32,29 +32,29 @@ class BoundsCalculator {
 
         if min < 0 {
            // If the minimum is negative then we want to have one of the step to be zero so that the chart is displayed nicely and more comprehensively
-           var step: Float
+           var step: Double
 
            if verticalGridStep > 3 {
-               step = abs(max - min) / Float(verticalGridStep - 1)
+               step = abs(max - min) / Double(verticalGridStep - 1)
            } else {
                step = Swift.max(abs(max - min) / 2, Swift.max(abs(min), abs(max)))
            }
 
            step = getUpperRoundNumber(step, forGridStep: verticalGridStep)
 
-           var newMin: Float
-           var newMax: Float
+           var newMin: Double
+           var newMax: Double
 
            if abs(min) > abs(max) {
-               let m = ceilf(abs(min) / step)
+               let m = ceil(abs(min) / step)
 
-               newMin = step * Float(m) * (min > 0 ? 1 : -1)
-               newMax = step * (Float(verticalGridStep) - m) * (max > 0 ? 1 : -1)
+               newMin = step * Double(m) * (min > 0 ? 1 : -1)
+               newMax = step * (Double(verticalGridStep) - m) * (max > 0 ? 1 : -1)
            } else {
-               let m = ceilf(abs(max) / step)
+               let m = ceil(abs(max) / step)
                
-               newMax = step * Float(m) * (max > 0 ? 1 : -1)
-               newMin = step * (Float(verticalGridStep) - m) * (min > 0 ? 1 : -1)
+               newMax = step * Double(m) * (max > 0 ? 1 : -1)
+               newMin = step * (Double(verticalGridStep) - m) * (min > 0 ? 1 : -1)
            }
 
            if min < newMin {
@@ -85,22 +85,22 @@ class BoundsCalculator {
    }
    
    func getUpperRoundNumber(
-        _ value: Float,
+        _ value: Double,
         forGridStep gridStep: Int
-   ) -> Float {
+   ) -> Double {
        guard value > 0 else {
            return 0
        }
        
        // We consider a round number the following by 0.5 step instead of true round number (with step of 1)
-       let logValue = log10f(value);
-       let scale = powf(10, floorf(logValue));
-       var n = ceilf(value / scale * 4);
+       let logValue = log10(value);
+       let scale = pow(10, floor(logValue));
+       var n = ceil(value / scale * 4);
        
        let tmp = Int(n) % gridStep;
        
        if tmp != 0 {
-           n += Float(gridStep - tmp)
+           n += Double(gridStep - tmp)
        }
        
        return n * scale / 4.0

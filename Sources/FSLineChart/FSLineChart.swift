@@ -10,7 +10,7 @@ import UIKit
 import QuartzCore
 
 open class FSLineChart: UIView {
-    internal var data: [Float] = []
+    internal var data: [Double] = []
     
     private let renderer = GridRenderer()
     private let layoutManager = LineChartLayoutManager()
@@ -104,7 +104,7 @@ open class FSLineChart: UIView {
         renderer.render(chart: self, layoutManager: layoutManager)
     }
 
-    public func setChartData(_ chartData: [Float]) {
+    public func setChartData(_ chartData: [Double]) {
         data = chartData
         layoutManager.layoutChart(self)
     }

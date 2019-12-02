@@ -41,7 +41,7 @@ class FSLineChartTests: XCTestCase {
     
     func testPerformanceExample() {
         let chart = FSLineChart()
-        let testData = (0..<1000).map { Float($0) }
+        let testData = (0..<1000).map { Double($0) }
         
         // Testing whether a 1000 values are processed between two frames (1/60th of a second)
         measure {
@@ -62,7 +62,7 @@ class FSLineChartTests: XCTestCase {
         chart.horizontalGridStep = 9
         chart.labelForIndex =  { "\($0)" }
         chart.labelForValue = { String(format: "%.f", $0) }
-        chart.setChartData((1...10).map  { _ in Float(0) })
+        chart.setChartData((1...10).map  { _ in Double(0) })
         
         UIGraphicsBeginImageContext(chart.bounds.size)
         chart.layer.render(in: UIGraphicsGetCurrentContext()!)
