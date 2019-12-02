@@ -13,7 +13,7 @@ open class FSLineChart: UIView {
     internal var data: [Double] = []
     
     private let renderer = GridRenderer()
-    private let layoutManager = LineChartLayoutManager()
+    private let layoutManager = LayoutManager()
     
     // Block definition for getting a label for a set index (use case: date, units,...)
     public typealias LabelForIndexGetter = (Int) -> String
@@ -80,23 +80,23 @@ open class FSLineChart: UIView {
 
     public override init(frame: CGRect) {
         super.init(frame: frame)
-        layoutManager.recalculateAxisSize(from: frame, margin: margin)
         self.commonInit()
     }
     
     public required init?(coder: NSCoder) {
         super.init(coder: coder)
-        layoutManager.recalculateAxisSize(from: frame, margin: margin)
         self.commonInit()
     }
     
     private func commonInit() {
         self.backgroundColor = .white
+        layoutManager.chart = self
+        layoutManager.recalculateAxisSize(from: frame, margin: margin)
     }
     
     public override func layoutSubviews() {
         layoutManager.recalculateAxisSize(from: frame, margin: margin)
-        layoutManager.layoutChart(self)
+        layoutManager.layoutChart()
         super.layoutSubviews()
     }
     
@@ -106,7 +106,7 @@ open class FSLineChart: UIView {
 
     public func setChartData(_ chartData: [Double]) {
         data = chartData
-        layoutManager.layoutChart(self)
+        layoutManager.layoutChart()
     }
 }
 
