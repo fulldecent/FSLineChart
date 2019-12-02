@@ -48,4 +48,27 @@ class FSLineChartTests: XCTestCase {
             chart.setChartData(testData);
         }
     }
+    
+    func testDataWithAllZeroesShouldNotCrash() {
+        let chart = FSLineChart(
+            frame: CGRect(
+                x: 0,
+                y: 0,
+                width: 320,
+                height: 176
+            )
+        )
+        chart.verticalGridStep = 5
+        chart.horizontalGridStep = 9
+        chart.labelForIndex =  { "\($0)" }
+        chart.labelForValue = { String(format: "%.f", $0) }
+        chart.setChartData((1...10).map  { _ in Float(0) })
+        
+        UIGraphicsBeginImageContext(chart.bounds.size)
+        chart.layer.render(in: UIGraphicsGetCurrentContext()!)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        XCTAssertNotNil(image)
+    }
 }
