@@ -14,7 +14,7 @@ class GridRenderer {
     // We pass FSLineChart now for temporarily refactoring reasons. Its better to use some struct.
     func render(
         chart options: FSLineChart,
-        layoutManager: LineChartLayoutManager
+        layoutManager: LayoutManager
     ) {
         guard options.data.count > 0 else {
             return

@@ -32,15 +32,25 @@
                                     <constraint firstAttribute="height" constant="166" id="mPh-F7-Spf"/>
                                 </constraints>
                             </view>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="0t4-5D-RCf" userLabel="Chart 2" customClass="FSLineChart" customModule="FSLineChart">
+                                <rect key="frame" x="36" y="472" width="342" height="166"/>
+                                <color key="backgroundColor" red="0.33333333329999998" green="0.33333333329999998" blue="0.33333333329999998" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="166" id="Iu7-c1-Hxf"/>
+                                </constraints>
+                            </view>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
                             <constraint firstItem="bTN-h0-UGb" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leadingMargin" constant="16" id="4KJ-j1-ScK"/>
+                            <constraint firstItem="0t4-5D-RCf" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leadingMargin" constant="16" id="Sml-Y7-H5D"/>
                             <constraint firstItem="d4w-YB-QSH" firstAttribute="top" secondItem="jyV-Pf-zRb" secondAttribute="bottom" constant="32" id="cWF-L9-Wca"/>
                             <constraint firstItem="d4w-YB-QSH" firstAttribute="leading" secondItem="kh9-bI-dsS" secondAttribute="leadingMargin" constant="16" id="d38-ev-f0M"/>
                             <constraint firstItem="2fi-mo-0CV" firstAttribute="top" secondItem="d4w-YB-QSH" secondAttribute="bottom" constant="32" id="dD7-ui-USm"/>
+                            <constraint firstAttribute="trailingMargin" secondItem="0t4-5D-RCf" secondAttribute="trailing" constant="16" id="pnw-po-Gee"/>
                             <constraint firstAttribute="trailingMargin" secondItem="bTN-h0-UGb" secondAttribute="trailing" constant="16" id="uPN-93-Auf"/>
                             <constraint firstAttribute="trailingMargin" secondItem="d4w-YB-QSH" secondAttribute="trailing" constant="16" id="v3s-0y-rmP"/>
+                            <constraint firstItem="0t4-5D-RCf" firstAttribute="top" secondItem="bTN-h0-UGb" secondAttribute="bottom" constant="32" id="wcB-DN-Ul0"/>
                             <constraint firstItem="bTN-h0-UGb" firstAttribute="top" secondItem="d4w-YB-QSH" secondAttribute="bottom" constant="32" id="yE7-pt-gi9"/>
                         </constraints>
                         <variation key="default">
@@ -51,6 +61,7 @@
                     </view>
                     <connections>
                         <outlet property="chartWithDates" destination="bTN-h0-UGb" id="uOJ-p8-WVy"/>
+                        <outlet property="chartWithZeroes" destination="0t4-5D-RCf" id="LgH-l2-cGm"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="x5A-6p-PRh" sceneMemberID="firstResponder"/>

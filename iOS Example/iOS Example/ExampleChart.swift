@@ -16,7 +16,7 @@ class ExampleChart: FSLineChart {
     
     public func load() {
         // Generate some dummy data
-        let data = (0...10).map { _ in Float(20 + (arc4random() % 100)) }
+        let data = (0...10).map { _ in Double(Int.random(in: 20...120)) }
         
         verticalGridStep = 5
         horizontalGridStep = 9

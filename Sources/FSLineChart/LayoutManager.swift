@@ -9,17 +9,18 @@
 import CoreGraphics
 import UIKit
 
-class LineChartLayoutManager {
-    private unowned var chart: FSLineChart!
+class LayoutManager {
+    // It is done for refactoring reasons.
+    // 'chart' should be set before using any methods.
+    unowned var chart: FSLineChart!
+    
     private var layers: [CALayer] = []
     private let boundsCalculator = BoundsCalculator()
     
     public private(set) var axisWidth: CGFloat = 0
     public private(set) var axisHeight: CGFloat = 0
         
-    func layoutChart(_ chart: FSLineChart) {
-        self.chart = chart
-        
+    func layoutChart() {
         // Removing the old label views as well as the chart layers.
         chart.subviews.forEach { $0.removeFromSuperview() }
         layers.forEach { $0.removeFromSuperlayer() }
@@ -64,7 +65,7 @@ class LineChartLayoutManager {
     }
 }
 
-fileprivate extension LineChartLayoutManager {
+fileprivate extension LayoutManager {
     func strokeChart() {
         let minBound = self.minVerticalBound
         let scale = self.verticalScale
@@ -163,7 +164,7 @@ fileprivate extension LineChartLayoutManager {
     }
 }
 
-fileprivate extension LineChartLayoutManager {
+fileprivate extension LayoutManager {
     func getPointForIndex(_ idx: Int, withScale scale: CGFloat) -> CGPoint {
         guard idx >= 0 && idx < data.count else {
             return .zero
@@ -261,9 +262,9 @@ fileprivate extension LineChartLayoutManager {
     }
 }
 
-extension LineChartLayoutManager {
+extension LayoutManager {
     func calculateHorizontalScale(
-        data: [Float],
+        data: [Double],
         horizontalGridStep: Int
     ) -> CGFloat {
         var scale: CGFloat = 1.0
@@ -298,7 +299,7 @@ extension LineChartLayoutManager {
     }
 }
 
-fileprivate extension LineChartLayoutManager {
+fileprivate extension LayoutManager {
     private func createLabelForValue(_ index: Int) -> UILabel? {
         let minBound = self.minVerticalBound
         let maxBound = self.maxVerticalBound
@@ -403,8 +404,8 @@ fileprivate extension LineChartLayoutManager {
 }
 
 // It's done for refactoring purposes
-extension LineChartLayoutManager {
-    var data: [Float] {
+extension LayoutManager {
+    var data: [Double] {
         return chart.data
     }
     
