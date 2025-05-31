@@ -1,118 +1,121 @@
-//
-//  BoundsCalculator.swift
-//  FSLineChart
-//
-//  Created by Yaroslav Zhurakovskiy on 25.11.2019.
-//  Copyright © 2019 William Entriken. All rights reserved.
-//
-
 import CoreGraphics
 import Foundation
 
+/// Calculates the minimum and maximum bounds for a chart's vertical axis, ensuring rounded steps for readability.
 class BoundsCalculator {
     private(set) var min: Double = Double.greatestFiniteMagnitude
     private(set) var max: Double = -Double.greatestFiniteMagnitude
     
-    func computeBounds(data: [Double], verticalGridStep: Int) {
+    /// Computes the bounds for the given dataset, adjusting for rounded steps and ensuring zero is included if negative values are present.
+    /// - Parameters:
+    ///   - data: The dataset to analyze.
+    ///   - verticalGridStep: The number of vertical grid lines.
+    func computeBounds(data: [Double], verticalGridStep: Int) throws {
+        guard !data.isEmpty else {
+            throw ChartError.emptyData
+        }
+        guard data.allSatisfy({ !$0.isNaN && !$0.isInfinite }) else {
+            throw ChartError.invalidData
+        }
+
         min = Double.greatestFiniteMagnitude
         max = -Double.greatestFiniteMagnitude
 
         for number in data {
-           if number < min {
-               min = number
-           }
-
-           if number > max {
-               max = number
-           }
+            if number < min {
+                min = number
+            }
+            if number > max {
+                max = number
+            }
         }
 
-       // The idea is to adjust the minimun and the maximum value to display the whole chart in the view, and if possible with nice "round" steps.
         max = getUpperRoundNumber(max, forGridStep: verticalGridStep)
 
         if min < 0 {
-           // If the minimum is negative then we want to have one of the step to be zero so that the chart is displayed nicely and more comprehensively
-           var step: Double
+            let step: Double
+            if verticalGridStep > 3 {
+                step = abs(max - min) / Double(verticalGridStep - 1)
+            } else {
+                step = Swift.max(abs(max - min) / 2, Swift.max(abs(min), abs(max)))
+            }
 
-           if verticalGridStep > 3 {
-               step = abs(max - min) / Double(verticalGridStep - 1)
-           } else {
-               step = Swift.max(abs(max - min) / 2, Swift.max(abs(min), abs(max)))
-           }
+            let roundedStep = getUpperRoundNumber(step, forGridStep: verticalGridStep)
 
-           step = getUpperRoundNumber(step, forGridStep: verticalGridStep)
+            var newMin: Double
+            var newMax: Double
 
-           var newMin: Double
-           var newMax: Double
+            if abs(min) > abs(max) {
+                let m = ceil(abs(min) / roundedStep)
+                newMin = roundedStep * Double(m) * (min > 0 ? 1 : -1)
+                newMax = roundedStep * (Double(verticalGridStep) - m) * (max > 0 ? 1 : -1)
+            } else {
+                let m = ceil(abs(max) / roundedStep)
+                newMax = roundedStep * Double(m) * (max > 0 ? 1 : -1)
+                newMin = roundedStep * (Double(verticalGridStep) - m) * (min > 0 ? 1 : -1)
+            }
 
-           if abs(min) > abs(max) {
-               let m = ceil(abs(min) / step)
+            if min < newMin {
+                newMin -= roundedStep
+                newMax -= roundedStep
+            }
 
-               newMin = step * Double(m) * (min > 0 ? 1 : -1)
-               newMax = step * (Double(verticalGridStep) - m) * (max > 0 ? 1 : -1)
-           } else {
-               let m = ceil(abs(max) / step)
-               
-               newMax = step * Double(m) * (max > 0 ? 1 : -1)
-               newMin = step * (Double(verticalGridStep) - m) * (min > 0 ? 1 : -1)
-           }
+            if max > newMax + roundedStep {
+                newMin += roundedStep
+                newMax += roundedStep
+            }
 
-           if min < newMin {
-               newMin -= step
-               newMax -= step
-           }
+            min = newMin
+            max = newMax
 
-           if max > newMax + step {
-               newMin += step
-               newMax += step
-           }
-
-           min = newMin
-           max = newMax
-
-           if max < min {
-               // TODO: use swap
-               let tmp = max
-               max = min
-               min = tmp
-           }
+            if max < min {
+                swap(&max, &min)
+            }
         }
         
-        // No data
         if max.isNaN {
             max = 1
         }
-   }
-   
-   func getUpperRoundNumber(
-        _ value: Double,
-        forGridStep gridStep: Int
-   ) -> Double {
-       guard value > 0 else {
-           return 0
-       }
-       
-       // We consider a round number the following by 0.5 step instead of true round number (with step of 1)
-       let logValue = log10(value);
-       let scale = pow(10, floor(logValue));
-       var n = ceil(value / scale * 4);
-       
-       let tmp = Int(n) % gridStep;
-       
-       if tmp != 0 {
-           n += Double(gridStep - tmp)
-       }
-       
-       return n * scale / 4.0
-   }
+    }
+    
+    /// Rounds a value to a number suitable for grid steps, using a 0.5 step increment.
+    /// - Parameters:
+    ///   - value: The value to round.
+    ///   - gridStep: The number of grid steps.
+    /// - Returns: The rounded value.
+    func getUpperRoundNumber(_ value: Double, forGridStep gridStep: Int) -> Double {
+        guard value > 0 else {
+            return 0
+        }
+        
+        let logValue = log10(value)
+        let scale = pow(10, floor(logValue))
+        var n = ceil(value / scale * 4)
+        
+        let tmp = Int(n) % gridStep
+        if tmp != 0 {
+            n += Double(gridStep - tmp)
+        }
+        
+        return n * scale / 4.0
+    }
 }
 
 extension BoundsCalculator {
+    /// The minimum vertical bound, ensuring it’s at least zero.
     var minVerticalBound: CGFloat {
-       return CGFloat(Swift.min(min, 0))
+        return CGFloat(Swift.min(min, 0))
     }
 
+    /// The maximum vertical bound, ensuring it’s at least zero.
     var maxVerticalBound: CGFloat {
-       return CGFloat(Swift.max(max, 0))
+        return CGFloat(Swift.max(max, 0))
     }
+}
+
+/// Errors related to chart data processing.
+enum ChartError: Error {
+    case emptyData
+    case invalidData
+    case invalidIndex
 }

@@ -1,87 +1,78 @@
-//
-//  GridRenderer.swift
-//  FSLineChart
-//
-//  Created by Yaroslav Zhurakovskiy on 25.11.2019.
-//  Copyright © 2019 William Entriken. All rights reserved.
-//
-
-import Foundation
 import CoreGraphics
 import UIKit
 
+/// Renders the grid and axes for a chart.
 class GridRenderer {
-    // We pass FSLineChart now for temporarily refactoring reasons. Its better to use some struct.
-    func render(
-        chart options: FSLineChart,
-        layoutManager: LayoutManager
-    ) {
-        guard options.data.count > 0 else {
-            return
-        }
+    /// Draws the chart’s grid and axes using the provided configuration.
+    /// - Parameters:
+    ///   - configuration: The chart’s configuration.
+    ///   - layoutManager: The layout manager for axis dimensions.
+    @MainActor
+    func render(configuration: ChartConfiguration, layoutManager: LayoutManager) throws {
+        guard !configuration.data.isEmpty else { return }
         
-        let ctx = UIGraphicsGetCurrentContext()!
-        UIGraphicsPushContext(ctx);
-        ctx.setLineWidth(options.axisLineWidth);
-        ctx.setStrokeColor(options.axisColor.cgColor)
-      
-      // draw coordinate axis
-        ctx.move(to: CGPointMake(options.margin, options.margin))
-        ctx.addLine(to: CGPointMake(options.margin, layoutManager.axisHeight + options.margin + 3))
+        guard let ctx = UIGraphicsGetCurrentContext() else { return }
+        UIGraphicsPushContext(ctx)
+        
+        ctx.setLineWidth(configuration.style.axisLineWidth)
+        ctx.setStrokeColor(configuration.style.axisColor.cgColor)
+        
+        // Draw coordinate axis
+        ctx.move(to: CGPoint(x: configuration.style.margin, y: configuration.style.margin))
+        ctx.addLine(to: CGPoint(x: configuration.style.margin, y: layoutManager.axisHeight + configuration.style.margin + 3))
         ctx.strokePath()
-      
+        
         let scale = layoutManager.calculateHorizontalScale(
-            data: options.data,
-            horizontalGridStep: options.horizontalGridStep
+            data: configuration.data,
+            horizontalGridStep: configuration.style.gridSteps.horizontal
         )
         let minBound = layoutManager.minVerticalBound
         let maxBound = layoutManager.maxVerticalBound
-      
-        // draw grid
-        if(options.drawInnerGrid) {
-            for i in 0..<options.horizontalGridStep {
-                ctx.setStrokeColor(options.innerGridColor.cgColor)
-                ctx.setLineWidth(options.innerGridLineWidth)
-              
-              let point = CGPointMake(
-                CGFloat(1 + i) * layoutManager.axisWidth / CGFloat(options.horizontalGridStep) * scale + options.margin,
-                options.margin
-              )
-              
-              ctx.move(to: point)
-              ctx.addLine(to: CGPointMake(point.x, layoutManager.axisHeight + options.margin))
-              ctx.strokePath()
-              
-            ctx.setStrokeColor(options.axisColor.cgColor)
-              ctx.setLineWidth(options.axisLineWidth)
-              ctx.move(to: CGPointMake(point.x - 0.5, layoutManager.axisHeight + options.margin))
-              ctx.addLine(to: CGPointMake(point.x - 0.5, layoutManager.axisHeight + layoutManager.margin + 3))
-              ctx.strokePath()
-          }
-          
-          for i in 0..<options.verticalGridStep+1 {
-              // If the value is zero then we display the horizontal axis
-              let v = maxBound - (maxBound - minBound) / CGFloat(options.verticalGridStep * i)
-              
-              if (v == 0) {
-                  ctx.setLineWidth(options.axisLineWidth)
-                  ctx.setStrokeColor(options.axisColor.cgColor)
-              } else {
-                  ctx.setStrokeColor(options.innerGridColor.cgColor)
-                  ctx.setLineWidth(options.innerGridLineWidth)
-              }
-              
-              let point = CGPointMake(
-                  options.margin,
-                  CGFloat(i) * layoutManager.axisHeight / CGFloat(options.verticalGridStep) + options.margin
-              )
-              
-              ctx.move(to: point)
-              ctx.addLine(to: CGPointMake(layoutManager.axisWidth + options.margin, point.y))
-              ctx.strokePath()
-          }
-      }
-      
-      UIGraphicsPopContext()
-  }
+        
+        // Draw grid
+        if configuration.style.drawInnerGrid {
+            for i in 0..<configuration.style.gridSteps.horizontal {
+                ctx.setStrokeColor(configuration.style.innerGridColor.cgColor)
+                ctx.setLineWidth(configuration.style.innerGridLineWidth)
+                
+                let point = CGPoint(
+                    x: CGFloat(1 + i) * layoutManager.axisWidth / CGFloat(configuration.style.gridSteps.horizontal) * scale + configuration.style.margin,
+                    y: configuration.style.margin
+                )
+                
+                ctx.move(to: point)
+                ctx.addLine(to: CGPoint(x: point.x, y: layoutManager.axisHeight + configuration.style.margin))
+                ctx.strokePath()
+                
+                ctx.setStrokeColor(configuration.style.axisColor.cgColor)
+                ctx.setLineWidth(configuration.style.axisLineWidth)
+                ctx.move(to: CGPoint(x: point.x - 0.5, y: layoutManager.axisHeight + configuration.style.margin))
+                ctx.addLine(to: CGPoint(x: point.x - 0.5, y: layoutManager.axisHeight + configuration.style.margin + 3))
+                ctx.strokePath()
+            }
+            
+            for i in 0..<configuration.style.gridSteps.vertical + 1 {
+                let v = maxBound - (maxBound - minBound) / CGFloat(configuration.style.gridSteps.vertical * i)
+                
+                if v == 0 {
+                    ctx.setLineWidth(configuration.style.axisLineWidth)
+                    ctx.setStrokeColor(configuration.style.axisColor.cgColor)
+                } else {
+                    ctx.setStrokeColor(configuration.style.innerGridColor.cgColor)
+                    ctx.setLineWidth(configuration.style.innerGridLineWidth)
+                }
+                
+                let point = CGPoint(
+                    x: configuration.style.margin,
+                    y: CGFloat(i) * layoutManager.axisHeight / CGFloat(configuration.style.gridSteps.vertical) + configuration.style.margin
+                )
+                
+                ctx.move(to: point)
+                ctx.addLine(to: CGPoint(x: layoutManager.axisWidth + configuration.style.margin, y: point.y))
+                ctx.strokePath()
+            }
+        }
+        
+        UIGraphicsPopContext()
+    }
 }

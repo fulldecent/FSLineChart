@@ -1,87 +1,115 @@
-FSLineChart
-===========
+# FSLineChart
 
 A line chart library for iOS.
 
-Screenshots
----
-<img src="Screenshots/fslinechart.png" width="320px" />&nbsp;
-<img src="Screenshots/fslinechart2.png" width="320px" />
+## Screenshots
 
-Installing FSLineChart
----
+![Action shot](Screenshots/screenshot-1.webp) 
+![Action shot](Screenshots/screenshot-2.webp)
 
-Add this to your project using Swift Package Manager. In Xcode that is simply: File > Swift Packages > Add Package Dependency... and you're done. Alternative installations options are available for legacy projects.
+## Installing FSLineChart
 
-How to use
----
-FSLineChart is a subclass of UIView so it can be added as regular view. The block structure allows you to format the values displayed on the chart the way you want. Here is a simple swift example:
+Add this to your project using Swift Package Manager. In Xcode, go to: File > Swift Packages > Add Package Dependency... and follow the prompts. Alternative installation options are available for legacy projects.
+
+## How to use
+
+FSLineChart is a subclass of `UIView`, so it can be added as a regular view. Use the `ChartLabels` structure to format the values displayed on the chart. Here’s a simple Swift example:
 
 ```swift
-var data: [Int] = []
-        
+import FSLineChart
+
+let chart = FSLineChart(frame: CGRect(x: 0, y: 0, width: 300, height: 200))
+
 // Generate some dummy data
-for _ in 0...10 {
-    data.append(Int(20 + (arc4random() % 100)))
-}
+let data = (0..<10).map { _ in Double.random(in: 20...120) }
 
-verticalGridStep = 5
-horizontalGridStep = 9
-labelForIndex = { "\($0)" }
-labelForValue = { "$\($0)" }
-setChartData(data)
+// Configure labels
+let labels = ChartLabels(
+    indexLabel: { "\($0)" },
+    valueLabel: { String(format: "$%.0f", $0) }
+)
+chart.setLabels(labels)
+
+// Configure style
+let style = ChartStyle(
+    axisColor: .gray,
+    axisLineWidth: 1,
+    lineColor: .fsOrange,
+    fillColor: UIColor.fsOrange.withAlphaComponent(0.25),
+    lineWidth: 1,
+    displayDataPoints: true,
+    dataPointColor: .fsOrange,
+    dataPointBackgroundColor: .fsOrange,
+    dataPointRadius: 3,
+    drawInnerGrid: true,
+    innerGridColor: UIColor(white: 0.9, alpha: 1.0),
+    innerGridLineWidth: 0.5,
+    gridSteps: (vertical: 5, horizontal: 9),
+    margin: 20,
+    bezierSmoothing: true,
+    bezierSmoothingTension: 0.2,
+    animationDuration: 0.5,
+    indexLabelFont: .systemFont(ofSize: 10),
+    indexLabelColor: .gray,
+    indexLabelBackgroundColor: .clear,
+    valueLabelFont: .systemFont(ofSize: 11),
+    valueLabelColor: .gray,
+    valueLabelBackgroundColor: UIColor(white: 1, alpha: 0.75),
+    valueLabelPosition: .mirrored
+)
+chart.applyStyle(style)
+
+// Set data and render
+try? chart.setChartData(data)
 ```
 
-You can also set several parameters. Some of the parameters including `color` and `fillColor` must be set before calling the `setChartData` method. All those properties are available:
+You can customize the chart’s appearance using the `ChartStyle` structure. The style and labels must be set before calling `setChartData`. Here are the available `ChartStyle` properties:
 
 ```swift
-// Index label properties
-public var labelForIndex: LabelForIndexGetter?
+public struct ChartStyle {
+    public let axisColor: UIColor
+    public let axisLineWidth: CGFloat
+    public let lineColor: UIColor
+    public let fillColor: UIColor?
+    public let lineWidth: CGFloat
+    public let displayDataPoints: Bool
+    public let dataPointColor: UIColor
+    public let dataPointBackgroundColor: UIColor
+    public let dataPointRadius: CGFloat
+    public let drawInnerGrid: Bool
+    public let innerGridColor: UIColor
+    public let innerGridLineWidth: CGFloat
+    public let gridSteps: (vertical: Int, horizontal: Int)
+    public let margin: CGFloat
+    public let bezierSmoothing: Bool
+    public let bezierSmoothingTension: CGFloat
+    public let animationDuration: TimeInterval
+    public let indexLabelFont: UIFont
+    public let indexLabelColor: UIColor
+    public let indexLabelBackgroundColor: UIColor
+    public let valueLabelFont: UIFont
+    public let valueLabelColor: UIColor
+    public let valueLabelBackgroundColor: UIColor
+    public let valueLabelPosition: ValueLabelPosition
 
-public var indexLabelFont: UIFont = UIFont(name: "HelveticaNeue-Light", size: 10)!
-public var indexLabelTextColor: UIColor = .gray
-public var indexLabelBackgroundColor: UIColor = .clear
-
-// Value label properties
-public var labelForValue: LabelForValueGetter?
-public var valueLabelFont: UIFont = UIFont(name: "HelveticaNeue-Light", size: 11)!
-public var valueLabelTextColor: UIColor = .gray
-public var valueLabelBackgroundColor: UIColor = UIColor(white: 1, alpha:0.75)
-public var valueLabelPosition: ValueLabelPosition = .right
-
-// Number of visible step in the chart
-public var verticalGridStep: Int = 3
-public var horizontalGridStep: Int = 3
-
-// Margin of the chart
-public var margin: CGFloat = 0.5
-
-// Decoration parameters, let you pick the color of the line as well as the color of the axis
-public var axisColor: UIColor = UIColor(white: 0.7, alpha: 1.0)
-public var axisLineWidth: CGFloat = 1
-
-// Chart parameters
-public var color: UIColor = .fsLightBlue
-public var fillColor: UIColor? = UIColor.fsLightBlue.withAlphaComponent(0.25)
-public var lineWidth: CGFloat = 1.0
-
-// Data points
-public var displayDataPoint: Bool = false
-public var dataPointColor: UIColor = .fsLightBlue
-public var dataPointBackgroundColor: UIColor = .fsLightBlue
-public var dataPointRadius: CGFloat = 1
-
-// Grid parameters
-public var drawInnerGrid: Bool = true
-public var innerGridColor: UIColor = UIColor(white: 0.9, alpha: 1.0)
-public var innerGridLineWidth: CGFloat = 0.5
-
-// Smoothing
-public var bezierSmoothing: Bool = true
-public var bezierSmoothingTension: CGFloat = 0.2
+    public enum ValueLabelPosition {
+        case left
+        case right
+        case mirrored
+    }
+}
 ```
 
+The `setChartData` method may throw errors if the data is empty or contains invalid values (e.g., NaN or infinite). Handle these errors appropriately:
 
-Examples
----
-You can clone the repo to see a simple example. I'm also using FSLineChart on [ChartLoot](https://github.com/ArthurGuibert/ChartLoot) if you want to see the integration in a bigger project.
+```swift
+do {
+    try chart.setChartData(data)
+} catch {
+    print("Failed to set chart data: \(error)")
+}
+```
+
+## Examples
+
+Clone the repository to explore a simple example project showcasing various chart configurations. For a larger integration, see FSLineChart in action in [ChartLoot](https://github.com/ArthurGuibert/ChartLoot).

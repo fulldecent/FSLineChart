@@ -1,341 +1,266 @@
-//
-//  LayoutManager.swift
-//  FSLineChart
-//
-//  Created by Yaroslav Zhurakovskiy on 25.11.2019.
-//  Copyright © 2019 William Entriken. All rights reserved.
-//
-
 import CoreGraphics
 import UIKit
 
+/// Manages the layout and rendering of a chart’s visual components, including lines, data points, and labels.
 class LayoutManager {
-    // It is done for refactoring reasons.
-    // 'chart' should be set before using any methods.
-    unowned var chart: FSLineChart!
-    
     private var layers: [CALayer] = []
     private let boundsCalculator = BoundsCalculator()
     
-    public private(set) var axisWidth: CGFloat = 0
-    public private(set) var axisHeight: CGFloat = 0
-        
-    func layoutChart() {
-        // Removing the old label views as well as the chart layers.
-        chart.subviews.forEach { $0.removeFromSuperview() }
-        layers.forEach { $0.removeFromSuperlayer() }
-        
-        guard data.count > 0 else {
-           return
-        }
-       
-        boundsCalculator.computeBounds(
-            data: data,
-            verticalGridStep: verticalGridStep
-        )
-        
-        strokeChart()
-
-        if displayDataPoint {
-           strokeDataPoints()
-        }
-
-        if labelForValue != nil {
-            for i in 0..<verticalGridStep {
-                if let label = createLabelForValue(i) {
-                    chart.addSubview(label)
-                }
-           }
-        }
-
-        if labelForIndex != nil {
-           for i in 0..<horizontalGridStep + 1 {
-               if let label = createLabelForIndex(i) {
-                chart.addSubview(label)
-               }
-           }
-        }
-
-        chart.setNeedsDisplay()
-    }
+    private(set) var axisWidth: CGFloat = 0
+    private(set) var axisHeight: CGFloat = 0
+    private var cachedHorizontalScale: CGFloat?
+    private var cachedVerticalScale: CGFloat?
     
+    /// Configures the axis size based on the chart’s frame and margin.
+    /// - Parameters:
+    ///   - frame: The chart’s frame.
+    ///   - margin: The margin around the chart.
     func recalculateAxisSize(from frame: CGRect, margin: CGFloat) {
         axisWidth = frame.size.width - 2 * margin
         axisHeight = frame.size.height - 2 * margin
+        cachedHorizontalScale = nil
+        cachedVerticalScale = nil
     }
-}
-
-fileprivate extension LayoutManager {
-    func strokeChart() {
-        let minBound = self.minVerticalBound
-        let scale = self.verticalScale
     
-        let noPath = getLinePath(scale: 0, withSmoothing:bezierSmoothing, close:false)
-        let path = getLinePath(scale: scale, withSmoothing:bezierSmoothing, close:false)
+    /// Lays out the chart’s visual elements in the provided view.
+    /// - Parameters:
+    ///   - configuration: The chart’s configuration.
+    ///   - view: The chart view to render into.
+    @MainActor
+    func layoutChart(configuration: ChartConfiguration, in view: FSLineChart) throws {
+        view.subviews.forEach { $0.removeFromSuperview() }
+        layers.forEach { $0.removeFromSuperlayer() }
+        layers.removeAll()
+        
+        guard !configuration.data.isEmpty else { return }
+        
+        try boundsCalculator.computeBounds(
+            data: configuration.data,
+            verticalGridStep: configuration.style.gridSteps.vertical
+        )
+        
+        try strokeChart(configuration: configuration, in: view)
+        
+        if configuration.style.displayDataPoints {
+            try strokeDataPoints(configuration: configuration, in: view)
+        }
+        
+        if let labels = configuration.labels {
+            for i in 0..<configuration.style.gridSteps.vertical {
+                if let label = createLabelForValue(index: i, configuration: configuration, labels: labels) {
+                    view.addSubview(label)
+                }
+            }
+            
+            for i in 0..<configuration.style.gridSteps.horizontal + 1 {
+                if let label = createLabelForIndex(index: i, configuration: configuration, labels: labels) {
+                    view.addSubview(label)
+                }
+            }
+        }
+        
+        view.setNeedsDisplay()
+    }
     
-        let noFill = getLinePath(scale: 0, withSmoothing:bezierSmoothing, close:true)
-        let fill = getLinePath(scale: scale, withSmoothing:bezierSmoothing, close:true)
+    /// Calculates the horizontal scale for the chart.
+    /// - Parameters:
+    ///   - data: The dataset.
+    ///   - horizontalGridStep: The number of horizontal grid lines.
+    /// - Returns: The calculated scale.
+    func calculateHorizontalScale(data: [Double], horizontalGridStep: Int) -> CGFloat {
+        if let cached = cachedHorizontalScale { return cached }
+        let scale = ChartUtilities.calculateHorizontalScale(data: data, horizontalGridStep: horizontalGridStep)
+        cachedHorizontalScale = scale
+        return scale
+    }
     
-        if let fillColor = fillColor {
+    /// The minimum vertical bound from the bounds calculator.
+    var minVerticalBound: CGFloat {
+        return boundsCalculator.minVerticalBound
+    }
+    
+    /// The maximum vertical bound from the bounds calculator.
+    var maxVerticalBound: CGFloat {
+        return boundsCalculator.maxVerticalBound
+    }
+    
+    @MainActor
+    private func strokeChart(configuration: ChartConfiguration, in view: FSLineChart) throws {
+        let minBound = boundsCalculator.minVerticalBound
+        let scale = verticalScale(configuration: configuration)
+        
+        let noPath = try ChartUtilities.getLinePath(
+            data: configuration.data,
+            scale: 0,
+            axisWidth: axisWidth,
+            axisHeight: axisHeight,
+            margin: configuration.style.margin,
+            smoothed: configuration.style.bezierSmoothing,
+            smoothingTension: configuration.style.bezierSmoothingTension,
+            closed: false
+        )
+        let path = try ChartUtilities.getLinePath(
+            data: configuration.data,
+            scale: scale,
+            axisWidth: axisWidth,
+            axisHeight: axisHeight,
+            margin: configuration.style.margin,
+            smoothed: configuration.style.bezierSmoothing,
+            smoothingTension: configuration.style.bezierSmoothingTension,
+            closed: false
+        )
+        
+        let noFill = try ChartUtilities.getLinePath(
+            data: configuration.data,
+            scale: 0,
+            axisWidth: axisWidth,
+            axisHeight: axisHeight,
+            margin: configuration.style.margin,
+            smoothed: configuration.style.bezierSmoothing,
+            smoothingTension: configuration.style.bezierSmoothingTension,
+            closed: true
+        )
+        let fill = try ChartUtilities.getLinePath(
+            data: configuration.data,
+            scale: scale,
+            axisWidth: axisWidth,
+            axisHeight: axisHeight,
+            margin: configuration.style.margin,
+            smoothed: configuration.style.bezierSmoothing,
+            smoothingTension: configuration.style.bezierSmoothingTension,
+            closed: true
+        )
+        
+        if let fillColor = configuration.style.fillColor {
             let fillLayer = CAShapeLayer()
-            fillLayer.frame = CGRectMake(self.bounds.origin.x, self.bounds.origin.y + minBound * scale, self.bounds.size.width, self.bounds.size.height)
-            fillLayer.bounds = self.bounds;
-            fillLayer.path = fill.cgPath
-            fillLayer.strokeColor = nil;
-            fillLayer.fillColor = fillColor.cgColor;
-            fillLayer.lineWidth = 0;
-            fillLayer.lineJoin = .round;
-    
-            chart.layer.addSublayer(fillLayer)
+            fillLayer.frame = CGRect(
+                x: view.bounds.origin.x,
+                y: view.bounds.origin.y + minBound * scale,
+                width: view.bounds.size.width,
+                height: view.bounds.size.height
+            )
+            fillLayer.bounds = view.bounds
+            fillLayer.path = noFill.cgPath
+            fillLayer.strokeColor = nil
+            fillLayer.fillColor = fillColor.cgColor
+            fillLayer.lineWidth = 0
+            fillLayer.lineJoin = .round
+            
+            view.layer.addSublayer(fillLayer)
             layers.append(fillLayer)
             
-            let fillAnimation = CABasicAnimation(keyPath: "path")
-            fillAnimation.duration = animationDuration;
-            fillAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            fillAnimation.fillMode = .forwards;
-            fillAnimation.fromValue = noFill.cgPath;
-            fillAnimation.toValue = fill.cgPath;
-            fillLayer.add(fillAnimation, forKey:"path")
+            let animator = UIViewPropertyAnimator(duration: configuration.style.animationDuration, curve: .easeInOut) {
+                fillLayer.path = fill.cgPath
+            }
+            animator.startAnimation()
         }
-    
+        
         let pathLayer = CAShapeLayer()
         pathLayer.frame = CGRect(
-            x: self.bounds.origin.x,
-            y: self.bounds.origin.y + minBound * scale,
-            width: self.bounds.size.width,
-            height: self.bounds.size.height
+            x: view.bounds.origin.x,
+            y: view.bounds.origin.y + minBound * scale,
+            width: view.bounds.size.width,
+            height: view.bounds.size.height
         )
-        pathLayer.bounds = self.bounds;
-        pathLayer.path = path.cgPath
-        pathLayer.strokeColor = color.cgColor
-        pathLayer.fillColor = nil;
-        pathLayer.lineWidth = lineWidth;
-        pathLayer.lineJoin = .round;
-    
-        chart.layer.addSublayer(pathLayer)
+        pathLayer.bounds = view.bounds
+        pathLayer.path = noPath.cgPath
+        pathLayer.strokeColor = configuration.style.lineColor.cgColor
+        pathLayer.fillColor = nil
+        pathLayer.lineWidth = configuration.style.lineWidth
+        pathLayer.lineJoin = .round
+        
+        view.layer.addSublayer(pathLayer)
         layers.append(pathLayer)
-    
-        if fillColor != nil {
-            let pathAnimation = CABasicAnimation(keyPath: "path")
-            pathAnimation.duration = animationDuration;
-            pathAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            pathAnimation.fromValue = noPath.cgPath
-            pathAnimation.toValue = path.cgPath
-            pathLayer.add(pathAnimation,forKey:"path")
-        } else {
-            let pathAnimation = CABasicAnimation(keyPath: "strokeEnd")
-            pathAnimation.duration = animationDuration;
-            pathAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            pathAnimation.fromValue = NSNumber(value: 0.0)
-            pathAnimation.toValue = NSNumber(value: 1.0)
-            pathLayer.add(pathAnimation, forKey:"path")
+        
+        let animator = UIViewPropertyAnimator(duration: configuration.style.animationDuration, curve: .easeInOut) {
+            pathLayer.path = path.cgPath
+            pathLayer.strokeEnd = 1.0
         }
+        animator.startAnimation()
     }
     
-    func strokeDataPoints() {
-        let minBound = minVerticalBound
-        let scale = verticalScale
+    @MainActor
+    private func strokeDataPoints(configuration: ChartConfiguration, in view: FSLineChart) throws {
+        let minBound = boundsCalculator.minVerticalBound
+        let scale = verticalScale(configuration: configuration)
         
-        for i in 0..<data.count {
-            var p = self.getPointForIndex(i, withScale:scale)
-            p.y +=  minBound * scale;
+        for i in 0..<configuration.data.count {
+            let p = try ChartUtilities.getPointForIndex(
+                index: i,
+                data: configuration.data,
+                scale: scale,
+                axisWidth: axisWidth,
+                axisHeight: axisHeight,
+                margin: configuration.style.margin
+            )
+            let adjustedPoint = CGPoint(x: p.x, y: p.y + minBound * scale)
             
             let circle = UIBezierPath(
                 ovalIn: CGRect(
-                    x: p.x - dataPointRadius,
-                    y: p.y - dataPointRadius,
-                    width: dataPointRadius * 2,
-                    height: dataPointRadius * 2
+                    x: adjustedPoint.x - configuration.style.dataPointRadius,
+                    y: adjustedPoint.y - configuration.style.dataPointRadius,
+                    width: configuration.style.dataPointRadius * 2,
+                    height: configuration.style.dataPointRadius * 2
                 )
             )
             
             let fillLayer = CAShapeLayer()
-            fillLayer.frame = CGRectMake(p.x, p.y, dataPointRadius, dataPointRadius);
-            fillLayer.bounds = CGRectMake(p.x, p.y, dataPointRadius, dataPointRadius);
-            fillLayer.path = circle.cgPath;
-            fillLayer.strokeColor = dataPointColor.cgColor;
-            fillLayer.fillColor = dataPointBackgroundColor.cgColor;
-            fillLayer.lineWidth = 1;
-            fillLayer.lineJoin = .round;
+            fillLayer.frame = CGRect(
+                x: adjustedPoint.x,
+                y: adjustedPoint.y,
+                width: configuration.style.dataPointRadius,
+                height: configuration.style.dataPointRadius
+            )
+            fillLayer.bounds = CGRect(
+                x: adjustedPoint.x,
+                y: adjustedPoint.y,
+                width: configuration.style.dataPointRadius,
+                height: configuration.style.dataPointRadius
+            )
+            fillLayer.path = circle.cgPath
+            fillLayer.strokeColor = configuration.style.dataPointColor.cgColor
+            fillLayer.fillColor = configuration.style.dataPointBackgroundColor.cgColor
+            fillLayer.lineWidth = 1
+            fillLayer.lineJoin = .round
             
-            chart.layer.addSublayer(fillLayer)
+            view.layer.addSublayer(fillLayer)
             layers.append(fillLayer)
         }
     }
-}
-
-fileprivate extension LayoutManager {
-    func getPointForIndex(_ idx: Int, withScale scale: CGFloat) -> CGPoint {
-        guard idx >= 0 && idx < data.count else {
-            return .zero
-        }
-        
-        // Compute the point position in the view from the data with a set scale value
-        let number = CGFloat(data[idx])
-        
-        if(data.count < 2) {
-            return CGPointMake(margin, axisHeight + margin - number * scale);
-        } else {
-            return CGPointMake(
-                margin + CGFloat(idx) * (axisWidth / CGFloat(data.count - 1)),
-                axisHeight + margin - number * scale
-            )
-        }
-    }
     
-    func getLinePath(
-        scale: CGFloat,
-        withSmoothing smoothed: Bool,
-        close closed: Bool
-    ) -> UIBezierPath {
-        let path = UIBezierPath()
+    @MainActor
+    private func createLabelForValue(index: Int, configuration: ChartConfiguration, labels: ChartLabels) -> UILabel? {
+        let minBound = boundsCalculator.minVerticalBound
+        let maxBound = boundsCalculator.maxVerticalBound
         
-        if(smoothed) {
-            for i in 0..<data.count-1 {
-                var controlPoint = Array(repeating: CGPoint.zero, count: 2)
-                var p = getPointForIndex(i, withScale: scale)
-                
-                // Start the path drawing
-                if i == 0 {
-                    path.move(to: p)
-                }
-                                
-                // First control point
-                var nextPoint = getPointForIndex(i + 1, withScale:scale)
-                var previousPoint = getPointForIndex(i - 1, withScale:scale)
-                var m = CGPoint.zero;
-                
-                if(i > 0) {
-                    m.x = (nextPoint.x - previousPoint.x) / 2;
-                    m.y = (nextPoint.y - previousPoint.y) / 2;
-                } else {
-                    m.x = (nextPoint.x - p.x) / 2;
-                    m.y = (nextPoint.y - p.y) / 2;
-                }
-                
-                controlPoint[0].x = p.x + m.x * bezierSmoothingTension;
-                controlPoint[0].y = p.y + m.y * bezierSmoothingTension;
-                
-                // Second control point
-                nextPoint = getPointForIndex(i + 2, withScale:scale)
-                previousPoint = getPointForIndex(i, withScale:scale)
-                p = getPointForIndex(i + 1, withScale:scale)
-                m = CGPoint.zero;
-                
-                if(i < data.count - 2) {
-                    m.x = (nextPoint.x - previousPoint.x) / 2;
-                    m.y = (nextPoint.y - previousPoint.y) / 2;
-                } else {
-                    m.x = (p.x - previousPoint.x) / 2;
-                    m.y = (p.y - previousPoint.y) / 2;
-                }
-                
-                controlPoint[1].x = p.x - m.x * bezierSmoothingTension;
-                controlPoint[1].y = p.y - m.y * bezierSmoothingTension;
-                
-                path.addCurve(
-                    to: p,
-                    controlPoint1: controlPoint[0],
-                    controlPoint2: controlPoint[1]
-                )
-            }
-            
-        } else {
-            for i in 0..<data.count {
-                if(i > 0) {
-                    path.addLine(to: getPointForIndex(i, withScale: scale))
-                } else {
-                    path.move(to: getPointForIndex(i, withScale: scale))
-                }
-            }
-        }
+        let value = minBound + (maxBound - minBound) / CGFloat(configuration.style.gridSteps.vertical * (index + 1))
+        let text = labels.valueLabel(value)
         
-        if closed {
-            // Closing the path for the fill drawing
-            path.addLine(to: getPointForIndex(data.count - 1, withScale:scale))
-            path.addLine(to: getPointForIndex(data.count - 1, withScale:0))
-            path.addLine(to: getPointForIndex(0, withScale:0))
-            path.addLine(to: getPointForIndex(0, withScale:scale))
-        }
-        
-        return path
-    }
-}
-
-extension LayoutManager {
-    func calculateHorizontalScale(
-        data: [Double],
-        horizontalGridStep: Int
-    ) -> CGFloat {
-        var scale: CGFloat = 1.0
-        let q = data.count / horizontalGridStep
-
-        if data.count > 1 {
-           scale = CGFloat(q * horizontalGridStep) / CGFloat(data.count - 1)
-        }
-
-        return scale
-    }
-    
-    private var horizontalScale: CGFloat {
-        return calculateHorizontalScale(
-            data: data,
-            horizontalGridStep: horizontalGridStep
-        )
-    }
-
-    private var verticalScale: CGFloat {
-        let minBound = self.minVerticalBound
-        let maxBound = self.maxVerticalBound
-        
-        let spread = maxBound - minBound;
-        var scale: CGFloat = 0
-        
-        if (spread != 0) {
-            scale = axisHeight / spread
-        }
-
-        return scale
-    }
-}
-
-fileprivate extension LayoutManager {
-    private func createLabelForValue(_ index: Int) -> UILabel? {
-        let minBound = self.minVerticalBound
-        let maxBound = self.maxVerticalBound
-
         let p = CGPoint(
-            x: margin + (valueLabelPosition == .right ? axisWidth : 0),
-            y: axisHeight + margin - CGFloat(index + 1) * axisHeight / CGFloat(verticalGridStep)
+            x: configuration.style.margin + (configuration.style.valueLabelPosition == .right ? axisWidth : 0),
+            y: axisHeight + configuration.style.margin - CGFloat(index + 1) * axisHeight / CGFloat(configuration.style.gridSteps.vertical)
         )
-
-        let value = minBound + (maxBound - minBound) / CGFloat(verticalGridStep * (index + 1))
-        guard let text = labelForValue?(value) else {
-            return nil
-        }
-
+        
         let rect = CGRect(
-            x: margin,
+            x: configuration.style.margin,
             y: p.y + 2,
-            width: self.frame.size.width - margin * 2 - 4.0,
+            width: axisWidth - configuration.style.margin * 2 - 4.0,
             height: 14
         )
         
-         let width = (text as NSString).boundingRect(
+        let width = (text as NSString).boundingRect(
             with: rect.size,
             options: [.usesLineFragmentOrigin],
-            attributes: [.font: valueLabelFont],
+            attributes: [.font: configuration.style.valueLabelFont],
             context: nil
         ).size.width
-
-
+        
         let xPadding: CGFloat = 6
-        var xOffset: CGFloat = width + xPadding;
-
-        if valueLabelPosition == .mirrored {
-            xOffset = -xPadding;
+        var xOffset: CGFloat = width + xPadding
+        if configuration.style.valueLabelPosition == .mirrored {
+            xOffset = -xPadding
         }
-
+        
         let label = UILabel(
             frame: CGRect(
                 x: p.x - xOffset,
@@ -344,48 +269,46 @@ fileprivate extension LayoutManager {
                 height: 14
             )
         )
-        label.text = text;
-        label.font = valueLabelFont;
-        label.textColor = valueLabelTextColor;
-        label.textAlignment = .center;
-        label.backgroundColor = valueLabelBackgroundColor;
-
+        label.text = text
+        label.font = configuration.style.valueLabelFont
+        label.textColor = configuration.style.valueLabelColor
+        label.textAlignment = .center
+        label.backgroundColor = configuration.style.valueLabelBackgroundColor
+        
         return label
     }
-
-    private func createLabelForIndex(_ index: Int) -> UILabel? {
-        let scale = self.horizontalScale
-        let q = data.count / horizontalGridStep;
-        var itemIndex = q * index;
-
-        if itemIndex >= data.count {
-            itemIndex = data.count - 1
+    
+    @MainActor
+    private func createLabelForIndex(index: Int, configuration: ChartConfiguration, labels: ChartLabels) -> UILabel? {
+        let scale = calculateHorizontalScale(data: configuration.data, horizontalGridStep: configuration.style.gridSteps.horizontal)
+        let q = configuration.data.count / configuration.style.gridSteps.horizontal
+        var itemIndex = q * index
+        
+        if itemIndex >= configuration.data.count {
+            itemIndex = configuration.data.count - 1
         }
-
-        guard let text = labelForIndex?(itemIndex) else {
-            return nil
-        }
-
-        let p = CGPointMake(
-            margin + CGFloat(index) * (axisWidth / CGFloat(horizontalGridStep)) * scale,
-            axisHeight + margin
+        
+        let text = labels.indexLabel(itemIndex)
+        
+        let p = CGPoint(
+            x: configuration.style.margin + CGFloat(index) * (axisWidth / CGFloat(configuration.style.gridSteps.horizontal)) * scale,
+            y: axisHeight + configuration.style.margin
         )
-            
-
+        
         let rect = CGRect(
-            x: margin,
+            x: configuration.style.margin,
             y: p.y + 2,
-            width: self.frame.size.width - margin * 2 - 4.0,
+            width: axisWidth - configuration.style.margin * 2 - 4.0,
             height: 14
-        );
-
+        )
+        
         let width = (text as NSString).boundingRect(
             with: rect.size,
             options: [.usesLineFragmentOrigin],
-            attributes: [.font: indexLabelFont],
+            attributes: [.font: configuration.style.indexLabelFont],
             context: nil
         ).size.width
-
+        
         let label = UILabel(
             frame: CGRect(
                 x: p.x - 4.0,
@@ -394,122 +317,22 @@ fileprivate extension LayoutManager {
                 height: 14
             )
         )
-        label.text = text;
-        label.font = indexLabelFont;
-        label.textColor = indexLabelTextColor;
-        label.backgroundColor = indexLabelBackgroundColor;
-
+        label.text = text
+        label.font = configuration.style.indexLabelFont
+        label.textColor = configuration.style.indexLabelColor
+        label.backgroundColor = configuration.style.indexLabelBackgroundColor
+        
         return label
     }
-}
-
-// It's done for refactoring purposes
-extension LayoutManager {
-    var data: [Double] {
-        return chart.data
-    }
     
-    var dataPointBackgroundColor: UIColor {
-        return chart.dataPointBackgroundColor
-    }
-    
-    var verticalGridStep: Int {
-        return chart.verticalGridStep
-    }
-    
-    var bezierSmoothingTension: CGFloat {
-        return chart.bezierSmoothingTension
-    }
-    
-    var displayDataPoint: Bool {
-        return chart.displayDataPoint
-    }
-    
-    var labelForValue: FSLineChart.LabelForValueGetter? {
-        return chart.labelForValue
-    }
-    
-    var labelForIndex: FSLineChart.LabelForIndexGetter? {
-        return chart.labelForIndex
-    }
-    
-    var horizontalGridStep: Int {
-        return chart.horizontalGridStep
-    }
-    
-    var valueLabelPosition: FSLineChart.ValueLabelPosition {
-        return chart.valueLabelPosition
-    }
-    
-    var minVerticalBound: CGFloat {
-        return boundsCalculator.minVerticalBound
-    }
-    
-    var maxVerticalBound: CGFloat {
-        return boundsCalculator.maxVerticalBound
-    }
-    
-    var margin: CGFloat {
-        return chart.margin
-    }
-    
-    var color: UIColor {
-        return chart.color
-    }
-    
-    var lineWidth: CGFloat {
-        return chart.lineWidth
-    }
-    
-    var frame: CGRect {
-        return chart.frame
-    }
-    
-    var bounds: CGRect {
-        return chart.bounds
-    }
-    
-    var fillColor: UIColor? {
-        return chart.fillColor
-    }
-    
-    var valueLabelFont: UIFont {
-        return chart.valueLabelFont
-    }
-    
-    var valueLabelTextColor: UIColor {
-        return chart.valueLabelTextColor
-    }
-    
-    var valueLabelBackgroundColor: UIColor {
-        return chart.valueLabelBackgroundColor
-    }
-    
-    var indexLabelFont: UIFont {
-        return chart.indexLabelFont
-    }
-    
-    var dataPointRadius: CGFloat {
-        return chart.dataPointRadius
-    }
-    
-    var indexLabelTextColor: UIColor {
-        return chart.indexLabelTextColor
-    }
-    
-    var dataPointColor: UIColor {
-        return chart.dataPointColor
-    }
-    
-    var bezierSmoothing: Bool {
-        return chart.bezierSmoothing
-    }
-    
-    var indexLabelBackgroundColor: UIColor {
-        return chart.indexLabelBackgroundColor
-    }
-    
-    var animationDuration: TimeInterval {
-        return chart.animationDuration
+    private func verticalScale(configuration: ChartConfiguration) -> CGFloat {
+        if let cached = cachedVerticalScale { return cached }
+        let minBound = boundsCalculator.minVerticalBound
+        let maxBound = boundsCalculator.maxVerticalBound
+        
+        let spread = maxBound - minBound
+        let scale: CGFloat = spread != 0 ? axisHeight / spread : 0
+        cachedVerticalScale = scale
+        return scale
     }
 }
